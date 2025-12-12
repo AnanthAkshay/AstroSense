@@ -3,7 +3,7 @@ Sector-Specific Predictors for Space Weather Impact Forecasting
 Translates space weather conditions into sector-specific risk assessments
 """
 from typing import Dict, Any, List, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import numpy as np
 from utils.logger import setup_logger
 
@@ -186,7 +186,7 @@ class AviationPredictor:
         flare_class = space_weather_data.get('flare_class', '')
         cme_speed = space_weather_data.get('cme_speed', 0.0)
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # X-class flares cause immediate impact
         if flare_class and flare_class[0].upper() == 'X':
@@ -364,7 +364,7 @@ class TelecomPredictor:
         cme_speed = space_weather_data.get('cme_speed', 0.0)
         kp_index = space_weather_data.get('kp_index', 3.0)
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # CME-driven impacts (only if speed is significant)
         if cme_speed > 100:
@@ -680,7 +680,7 @@ class PowerGridPredictor:
             logger.warning(f"HIGH power grid alert: GIC risk level {gic_risk}")
         
         # Calculate 6-hour advance warning window
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         cme_speed = space_weather_data.get('cme_speed', 0.0)
         
         if cme_speed > 100:  # Only calculate for meaningful CME speeds
@@ -870,7 +870,7 @@ class SatellitePredictor:
             logger.warning(f"HIGH satellite alert: Drag risk level {drag_risk}")
         
         # Calculate 24-hour advance notice window
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         cme_speed = space_weather_data.get('cme_speed', 0.0)
         
         if cme_speed > 100:  # Only calculate for meaningful CME speeds
@@ -1124,7 +1124,7 @@ class CompositeScoreCalculator:
             Dictionary with composite score, severity, alert, and change log
         """
         if timestamp is None:
-            timestamp = datetime.utcnow()
+            timestamp = datetime.now(timezone.utc)
         
         # Extract sector risks
         aviation_risk = sector_predictions.get('aviation', {}).get('hf_blackout_probability', 0.0)

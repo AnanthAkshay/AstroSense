@@ -18,6 +18,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: astrosense-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   backend:
     build:
@@ -26,18 +41,26 @@ services:
     container_name: astrosense-backend
     environment:
       DATABASE_URL: postgresql://astrosense:astrosense_password@postgres:5432/astrosense_db
+      REDIS_URL: redis://redis:6379/0
       NASA_DONKI_API_KEY: ${NASA_DONKI_API_KEY}
       API_HOST: 0.0.0.0
       API_PORT: 8000
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      ENVIRONMENT: development
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - ./backend/ml_models:/app/ml_models
+      - backend_logs:/app/logs
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
 
   frontend:
     build:
@@ -47,6 +70,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
       NEXT_PUBLIC_WS_URL: ws://localhost:8000
+      NEXT_PUBLIC_CESIUM_ION_TOKEN: ${NEXT_PUBLIC_CESIUM_ION_TOKEN}
     ports:
       - "3000:3000"
     depends_on:
@@ -56,6 +80,9 @@ services:
       - /app/node_modules
       - /app/.next
     command: npm run dev
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  redis_data:
+  backend_logs:

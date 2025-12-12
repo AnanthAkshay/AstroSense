@@ -1,0 +1,17 @@
+{
+  "version": "test",
+  "timestamp": "20251212_170413",
+  "model_type": "RandomForestRegressor",
+  "n_estimators": 43,
+  "max_depth": 8,
+  "feature_importance": {
+    "solar_wind_speed": 0.02676598908173272,
+    "bz_field": 0.040577232500149885,
+    "kp_index": 0.06367982121979449,
+    "proton_flux": 0.042854825292522256,
+    "cme_speed": 0.5519042717765212,
+    "flare_class_encoded": 0.27421786012927946
+  },
+  "metrics": {},
+  "model_file": "random_forest_vtest_20251212_170413.pkl"
+}

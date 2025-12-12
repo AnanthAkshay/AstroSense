@@ -1,0 +1,73 @@
+# Prometheus alert rules for AstroSense
+groups:
+  - name: astrosense_alerts
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: cpu_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 5 minutes"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: memory_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% for more than 5 minutes"
+
+      # High disk usage
+      - alert: HighDiskUsage
+        expr: disk_usage_percent > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High disk usage detected"
+          description: "Disk usage is above 90% for more than 2 minutes"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: error_rate_percent > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 5% for more than 2 minutes"
+
+      # Service down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "{{ $labels.job }} service is down"
+
+      # Database connection issues
+      - alert: DatabaseConnectionIssues
+        expr: database_connections_active > database_connections_max * 0.9
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Database connection pool is over 90% utilized"
+
+      # Slow response times
+      - alert: SlowResponseTimes
+        expr: avg_response_time > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response times detected"
+          description: "Average response time is above 2 seconds for more than 5 minutes"

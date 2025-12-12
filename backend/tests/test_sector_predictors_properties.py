@@ -4,6 +4,7 @@ Tests universal properties for aviation, telecom, GPS, power grid, and satellite
 """
 import pytest
 from hypothesis import given, strategies as st, settings, assume
+from datetime import datetime, timezone
 from services.sector_predictors import (
     AviationPredictor,
     TelecomPredictor,
@@ -845,7 +846,7 @@ def test_property_70_high_composite_score_alert(aviation_risk, telecom_risk,
     }
     
     # When we calculate composite score
-    result = calculator.calculate(sector_predictions, datetime.utcnow())
+    result = calculator.calculate(sector_predictions, datetime.now(timezone.utc))
     
     composite = result['composite_score']
     
@@ -902,7 +903,7 @@ def test_property_71_composite_score_change_logging(score1, score2):
         'power_grid': {'gic_risk_level': max(1, int((score1 / 100.0) * 9) + 1)}
     }
     
-    timestamp1 = datetime.utcnow()
+    timestamp1 = datetime.now(timezone.utc)
     
     # Calculate first score
     result1 = calculator.calculate(sector_predictions1, timestamp1)

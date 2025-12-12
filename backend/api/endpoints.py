@@ -5,7 +5,7 @@ Provides REST endpoints for predictions, data fetching, and backtesting
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 import time
 from collections import defaultdict
@@ -189,7 +189,7 @@ async def predict_impact(
         
         # Prepare response
         response = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'predictions': {
                 'aviation': {
                     'hf_blackout_probability': aviation_pred['hf_blackout_probability'],
@@ -266,6 +266,7 @@ async def fetch_data(request: Request) -> Dict[str, Any]:
         
         # Fetch all space weather data
         data = await api_client.fetch_all_space_weather_data()
+        logger.info(f"Fetched data: {data}")
         
         # Extract and format the data
         response = {
@@ -352,6 +353,57 @@ async def backtest(
         # Log post-event accuracy metrics
         await backtesting_engine.log_post_event_accuracy(data.event_name, accuracy_report)
         
+        # Extract predicted and actual impacts from timeline for response format
+        predicted_impacts = {}
+        actual_impacts = {}
+        accuracy_metrics = {}
+        
+        # Get the latest measurement event with predictions
+        measurement_events = [e for e in replay_results['timeline'] 
+                            if e.get('event_type') == 'measurement' 
+                            and e.get('predicted_impacts') 
+                            and e.get('actual_impacts')]
+        
+        if measurement_events:
+            latest_event = measurement_events[-1]
+            predicted_impacts = latest_event['predicted_impacts']
+            actual_impacts = latest_event['actual_impacts']
+            
+            # Calculate simple accuracy metrics
+            accuracy_metrics = {
+                'aviation_error': abs(predicted_impacts.get('aviation', {}).get('hf_blackout_probability', 0) - 
+                                   actual_impacts.get('aviation', {}).get('hf_blackout_probability', 0)),
+                'telecom_error': abs(predicted_impacts.get('telecommunications', {}).get('signal_degradation_percent', 0) - 
+                                   actual_impacts.get('telecommunications', {}).get('signal_degradation_percent', 0)),
+                'gps_error': abs(predicted_impacts.get('gps', {}).get('positional_drift_cm', 0) - 
+                               actual_impacts.get('gps', {}).get('positional_drift_cm', 0)),
+                'power_grid_error': abs(predicted_impacts.get('power_grid', {}).get('gic_risk_level', 0) - 
+                                      actual_impacts.get('power_grid', {}).get('gic_risk_level', 0)),
+                'satellite_error': abs(predicted_impacts.get('satellite', {}).get('orbital_drag_risk', 0) - 
+                                     actual_impacts.get('satellite', {}).get('orbital_drag_risk', 0)),
+                'composite_error': abs(predicted_impacts.get('composite_score', 0) - 
+                                     actual_impacts.get('composite_score', 0))
+            }
+        else:
+            # Provide default structure if no measurement events
+            predicted_impacts = {
+                'aviation': {'hf_blackout_probability': 0},
+                'telecommunications': {'signal_degradation_percent': 0},
+                'gps': {'positional_drift_cm': 0},
+                'power_grid': {'gic_risk_level': 1},
+                'satellite': {'orbital_drag_risk': 1},
+                'composite_score': 0
+            }
+            actual_impacts = predicted_impacts.copy()
+            accuracy_metrics = {
+                'aviation_error': 0,
+                'telecom_error': 0,
+                'gps_error': 0,
+                'power_grid_error': 0,
+                'satellite_error': 0,
+                'composite_error': 0
+            }
+        
         # Prepare response
         response = {
             'event_name': data.event_name,
@@ -366,12 +418,15 @@ async def backtest(
                 }
                 for event in replay_results['timeline']
             ],
+            'predicted_impacts': predicted_impacts,
+            'actual_impacts': actual_impacts,
+            'accuracy_metrics': accuracy_metrics,
             'display_data': display_data,
             'accuracy_report': accuracy_report,
             'replay_summary': {
                 'events_processed': replay_results['events_processed'],
                 'predictions_generated': replay_results['predictions_generated'],
-                'duration_simulated_hours': len(timeline) * 5 / 60 if timeline else 0  # 5-minute intervals
+                'duration_simulated_hours': len(timeline) * 2 if timeline else 0  # 2-hour intervals
             },
             'mode_switching': backtesting_engine.support_mode_switching()
         }
@@ -439,7 +494,7 @@ async def backtest_control(
             'action': data.action,
             'message': message,
             'status': status_info,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         return response
@@ -477,7 +532,7 @@ async def backtest_status(request: Request) -> Dict[str, Any]:
         response = {
             'replay_status': status_info,
             'mode_switching': mode_switching,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         return response
@@ -488,3 +543,16 @@ async def backtest_status(request: Request) -> Dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Status retrieval failed: {str(e)}"
         )
+
+
+@router.get("/health")
+async def api_health_check() -> Dict[str, str]:
+    """
+    GET /api/health
+    
+    Simple health check endpoint
+    
+    Returns:
+        JSON with health status
+    """
+    return {"status": "healthy"}

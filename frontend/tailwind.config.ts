@@ -8,6 +8,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'sans': ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
       colors: {
         'astro-dark': '#0a0e27',
         'astro-blue': '#1e3a8a',
@@ -17,6 +20,8 @@ const config: Config = {
       animation: {
         'fade-in': 'fadeIn 300ms ease-in',
         'slide-up': 'slideUp 400ms ease-out',
+        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'bounce-subtle': 'bounceSubtle 300ms ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -26,6 +31,10 @@ const config: Config = {
         slideUp: {
           '0%': { transform: 'translateY(10px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        bounceSubtle: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-2px)' },
         },
       },
     },

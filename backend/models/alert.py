@@ -3,7 +3,7 @@ Alert data models for AstroSense
 Defines alert structures and types
 """
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone, timezone
 from enum import Enum
 
 
@@ -81,7 +81,7 @@ class Alert:
     def is_expired(self, current_time: Optional[datetime] = None) -> bool:
         """Check if alert has expired"""
         if current_time is None:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(timezone.utc)
         return current_time >= self.expires_at
     
     @classmethod

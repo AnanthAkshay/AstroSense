@@ -3,7 +3,7 @@ Feature Extraction Engine for Space Weather Data
 Transforms raw data into ML-ready feature vectors
 """
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timezone, timedelta
 import numpy as np
 from utils.logger import setup_logger
 
@@ -170,7 +170,7 @@ class FeatureExtractor:
             Local time factor [0, 1] where 1 = midnight sector
         """
         # Calculate local time from longitude and UTC time
-        current_utc = datetime.utcnow()
+        current_utc = datetime.now(timezone.utc)
         hours_offset = longitude / 15.0  # 15° per hour
         local_hour = (current_utc.hour + hours_offset) % 24
         

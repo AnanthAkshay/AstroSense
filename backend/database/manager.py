@@ -6,7 +6,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor, Json
 from psycopg2.pool import SimpleConnectionPool
 from typing import Optional, List, Dict, Any, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timezone, timedelta
 from contextlib import contextmanager
 import os
 import logging
@@ -598,7 +598,7 @@ class DatabaseManager:
         Validates: Requirements 14.5
         """
         if cutoff_date is None:
-            cutoff_date = datetime.utcnow() - timedelta(days=365)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=365)
         
         archived_counts = {}
         

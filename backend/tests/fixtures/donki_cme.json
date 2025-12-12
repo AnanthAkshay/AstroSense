@@ -1,0 +1,40 @@
+[
+  {
+    "activityID": "2024-01-01T12:00:00-CME-001",
+    "catalog": "M2M_CATALOG",
+    "startTime": "2024-01-01T12:00:00Z",
+    "sourceLocation": "N15W30",
+    "activeRegionNum": 3540,
+    "instruments": [
+      {
+        "displayName": "SOHO: LASCO/C2"
+      }
+    ],
+    "cmeAnalyses": [
+      {
+        "time21_5": "2024-01-01T12:24:00Z",
+        "latitude": 15,
+        "longitude": -30,
+        "halfAngle": 25,
+        "speed": 850,
+        "type": "C",
+        "isMostAccurate": true,
+        "associatedCMEID": "2024-01-01T12:00:00-CME-001",
+        "catalog": "M2M_CATALOG",
+        "enlilList": [
+          {
+            "modelCompletionTime": "2024-01-01T18:45:32Z",
+            "au": 2,
+            "estimatedShockArrivalTime": "2024-01-03T06:30:00Z",
+            "estimatedDuration": 18,
+            "rmin_re": 6.8,
+            "kp_18": 5,
+            "kp_90": 6,
+            "kp_135": 4,
+            "kp_180": 3
+          }
+        ]
+      }
+    ]
+  }
+]

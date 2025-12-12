@@ -4,7 +4,7 @@ Tests universal properties for alert generation, prioritization, and lifecycle
 """
 import pytest
 from hypothesis import given, strategies as st, settings, assume
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timezone, timedelta
 import time
 
 from services.alert_manager import AlertManager
@@ -94,8 +94,8 @@ def test_property_34_flash_alert_generation_speed(flare_class, space_weather_dat
     """
     # Given an X-class flare detection
     manager = AlertManager()
-    detection_time = datetime.utcnow()
-    generation_start = datetime.utcnow()
+    detection_time = datetime.now(timezone.utc)
+    generation_start = datetime.now(timezone.utc)
     
     # When we generate a flash alert
     start_time = time.time()
@@ -133,7 +133,7 @@ def test_property_35_flash_alert_content_completeness(flare_class, space_weather
     """
     # Given an X-class flare
     manager = AlertManager()
-    detection_time = datetime.utcnow()
+    detection_time = datetime.now(timezone.utc)
     
     # When we generate a flash alert
     flash_alert = manager.generate_flash_alert(
@@ -185,7 +185,7 @@ def test_property_36_alert_prioritization_and_ordering(num_alerts, space_weather
         time.sleep(0.001)
         manager.generate_flash_alert(
             flare_class=flare_classes[i % len(flare_classes)],
-            detection_time=datetime.utcnow(),
+            detection_time=datetime.now(timezone.utc),
             space_weather_data=space_weather_data
         )
     
@@ -232,7 +232,7 @@ def test_property_37_alert_expiration_lifecycle(flare_class, space_weather_data)
     """
     # Given a flash alert
     manager = AlertManager()
-    detection_time = datetime.utcnow()
+    detection_time = datetime.now(timezone.utc)
     
     flash_alert = manager.generate_flash_alert(
         flare_class=flare_class,
@@ -387,7 +387,7 @@ def test_flash_alert_handles_non_x_class_flares(flare_class, space_weather_data)
     (though they may have lower severity)
     """
     manager = AlertManager()
-    detection_time = datetime.utcnow()
+    detection_time = datetime.now(timezone.utc)
     
     # Should not raise an error
     flash_alert = manager.generate_flash_alert(

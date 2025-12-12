@@ -2,7 +2,7 @@
 Example usage of the AstroSense Database Layer
 Demonstrates common operations and integration patterns
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timezone, timedelta
 from database import DatabaseManager
 from models.space_weather import SpaceWeatherData, CMEEvent, SolarFlare
 from models.prediction import SectorPredictions, CompositeScoreHistory
@@ -15,7 +15,7 @@ def example_space_weather_workflow():
     
     # Insert space weather measurement
     data = SpaceWeatherData(
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         solar_wind_speed=650.0,
         bz_field=-12.5,
         kp_index=6.5,
@@ -28,7 +28,7 @@ def example_space_weather_workflow():
     
     # Query recent data
     recent_data = db.get_space_weather_data(
-        start_time=datetime.utcnow() - timedelta(hours=24),
+        start_time=datetime.now(timezone.utc) - timedelta(hours=24),
         limit=100
     )
     print(f"Retrieved {len(recent_data)} recent measurements")
@@ -42,7 +42,7 @@ def example_prediction_workflow():
     
     # Create prediction
     prediction = SectorPredictions(
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         aviation_hf_blackout_prob=75.5,
         aviation_polar_risk=82.0,
         telecom_signal_degradation=45.3,
@@ -66,7 +66,7 @@ def example_prediction_workflow():
     
     # Store composite score history for trend analysis
     score_history = CompositeScoreHistory(
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         composite_score=68.4,
         aviation_contribution=26.4,  # 0.35 * 75.5
         telecom_contribution=11.3,   # 0.25 * 45.3
@@ -86,14 +86,14 @@ def example_alert_workflow():
     
     # Create flash alert for X-class flare
     alert = Alert(
-        alert_id=f"FLASH_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
+        alert_id=f"FLASH_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
         alert_type=AlertType.FLASH,
         severity=AlertSeverity.CRITICAL,
         title="X5.2 Solar Flare Detected",
         description="Major X-class solar flare detected at 14:23 UTC. Immediate HF radio blackouts expected.",
         affected_sectors=["aviation", "telecom", "emergency_services"],
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(hours=2),
+        created_at=datetime.now(timezone.utc),
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=2),
         mitigation_recommendations=[
             "Switch to backup communication systems",
             "Reroute polar flights to lower latitudes",
@@ -122,12 +122,12 @@ def example_cme_tracking():
     # Insert CME event
     cme = CMEEvent(
         event_id="CME_20240515_001",
-        detection_time=datetime.utcnow(),
+        detection_time=datetime.now(timezone.utc),
         cme_speed=1450.0,
-        predicted_arrival=datetime.utcnow() + timedelta(hours=36),
+        predicted_arrival=datetime.now(timezone.utc) + timedelta(hours=36),
         confidence_interval=(
-            datetime.utcnow() + timedelta(hours=32),
-            datetime.utcnow() + timedelta(hours=40)
+            datetime.now(timezone.utc) + timedelta(hours=32),
+            datetime.now(timezone.utc) + timedelta(hours=40)
         ),
         source="NASA_DONKI"
     )
@@ -137,7 +137,7 @@ def example_cme_tracking():
     
     # Query recent CME events
     recent_cmes = db.get_cme_events(
-        start_time=datetime.utcnow() - timedelta(days=7),
+        start_time=datetime.now(timezone.utc) - timedelta(days=7),
         limit=50
     )
     print(f"Recent CME events: {len(recent_cmes)}")
@@ -151,8 +151,8 @@ def example_trend_analysis():
     
     # Get composite score history for the last 7 days
     history = db.get_composite_score_history(
-        start_time=datetime.utcnow() - timedelta(days=7),
-        end_time=datetime.utcnow(),
+        start_time=datetime.now(timezone.utc) - timedelta(days=7),
+        end_time=datetime.now(timezone.utc),
         limit=10000
     )
     
@@ -203,7 +203,7 @@ def example_performance_monitoring():
     start_time = time.time()
     
     data = SpaceWeatherData(
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         solar_wind_speed=500.0,
         bz_field=-5.0,
         kp_index=4.0,

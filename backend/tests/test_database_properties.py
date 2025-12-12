@@ -6,7 +6,7 @@ Feature: astrosense-space-weather
 """
 import pytest
 from hypothesis import given, strategies as st, settings, assume
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timezone, timedelta
 import time
 import os
 from typing import Dict, Any
@@ -302,7 +302,7 @@ def test_property_50_automatic_data_archival(db_manager):
     Validates: Requirements 14.5
     """
     # Insert old test data (older than 1 year)
-    old_timestamp = datetime.utcnow() - timedelta(days=400)
+    old_timestamp = datetime.now(timezone.utc) - timedelta(days=400)
     old_data = SpaceWeatherData(
         timestamp=old_timestamp,
         solar_wind_speed=500.0,
@@ -324,7 +324,7 @@ def test_property_50_automatic_data_archival(db_manager):
     assert len(retrieved_before) > 0
     
     # Trigger archival for data older than 1 year
-    cutoff_date = datetime.utcnow() - timedelta(days=365)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=365)
     archived_counts = db_manager.archive_old_data(cutoff_date=cutoff_date)
     
     # Verify archival occurred
@@ -395,12 +395,12 @@ def test_cme_event_crud_operations(db_manager):
     # Create
     event = CMEEvent(
         event_id="TEST_CME_CRUD_001",
-        detection_time=datetime.utcnow(),
+        detection_time=datetime.now(timezone.utc),
         cme_speed=1200.0,
-        predicted_arrival=datetime.utcnow() + timedelta(days=2),
+        predicted_arrival=datetime.now(timezone.utc) + timedelta(days=2),
         confidence_interval=(
-            datetime.utcnow() + timedelta(days=1, hours=20),
-            datetime.utcnow() + timedelta(days=2, hours=4)
+            datetime.now(timezone.utc) + timedelta(days=1, hours=20),
+            datetime.now(timezone.utc) + timedelta(days=2, hours=4)
         ),
         source="TEST_CRUD"
     )
@@ -424,9 +424,9 @@ def test_solar_flare_crud_operations(db_manager):
     # Create
     flare = SolarFlare(
         flare_id="TEST_FLARE_CRUD_001",
-        detection_time=datetime.utcnow(),
+        detection_time=datetime.now(timezone.utc),
         flare_class="X",
-        peak_time=datetime.utcnow() + timedelta(minutes=15),
+        peak_time=datetime.now(timezone.utc) + timedelta(minutes=15),
         location="N15W30",
         source="TEST_CRUD"
     )
@@ -455,8 +455,8 @@ def test_alert_lifecycle(db_manager):
         title="Test Flash Alert",
         description="Test alert for database operations",
         affected_sectors=["aviation", "telecom"],
-        created_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() - timedelta(hours=3),  # Already expired
+        created_at=datetime.now(timezone.utc),
+        expires_at=datetime.now(timezone.utc) - timedelta(hours=3),  # Already expired
         mitigation_recommendations=["Monitor conditions", "Prepare backup systems"]
     )
     

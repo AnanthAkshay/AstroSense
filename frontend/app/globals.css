@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -41,4 +43,39 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #3b82f6;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .mobile-padding {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .mobile-text {
+    font-size: 0.875rem;
+  }
+  
+  .mobile-hide {
+    display: none;
+  }
+}
+
+/* Animation performance optimization */
+* {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Ensure animations stay within timing constraints */
+.animate-fade-in {
+  animation-duration: 300ms;
+}
+
+.animate-slide-up {
+  animation-duration: 400ms;
+}
+
+.animate-bounce-subtle {
+  animation-duration: 300ms;
 }

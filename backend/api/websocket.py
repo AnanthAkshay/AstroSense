@@ -6,7 +6,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List, Dict, Any
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timezone
 
 from services.api_client import api_client
 from services.sector_predictors import (
@@ -203,7 +203,7 @@ class ConnectionManager:
                 # Prepare update message
                 update = {
                     'type': 'space_weather_update',
-                    'timestamp': datetime.utcnow().isoformat(),
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
                     'data': {
                         'solar_wind': {
                             'speed': solar_wind.get('speed'),
@@ -307,13 +307,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     # Respond to ping
                     await websocket.send_json({
                         'type': 'pong',
-                        'timestamp': datetime.utcnow().isoformat()
+                        'timestamp': datetime.now(timezone.utc).isoformat()
                     })
                 elif message.get('type') == 'reconnect':
                     # Client requesting reconnection (already connected)
                     await websocket.send_json({
                         'type': 'reconnect_ack',
-                        'timestamp': datetime.utcnow().isoformat(),
+                        'timestamp': datetime.now(timezone.utc).isoformat(),
                         'message': 'Already connected'
                     })
                 

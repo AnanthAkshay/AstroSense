@@ -3,12 +3,173 @@ Alert Management System for AstroSense
 Generates, prioritizes, and manages space weather alerts
 """
 from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timezone, timedelta
 import uuid
+import time
+from collections import defaultdict
 from models.alert import Alert, FlashAlert, ImpactForecast, AlertType, AlertSeverity
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
+
+# Constants for forecast merging
+MERGE_WINDOW = 30 * 60  # 30 minutes in seconds
+
+# Global storage for active forecasts (in production, use Redis or database)
+_active_forecasts = {}  # key -> {"payload": dict, "created_at": timestamp}
+
+
+def validate_alert_payload(payload: Dict[str, Any]) -> bool:
+    """
+    Validate alert payload has all required fields with correct types
+    
+    Args:
+        payload: Alert payload dictionary
+        
+    Returns:
+        True if valid
+        
+    Raises:
+        ValueError: If payload is invalid
+    """
+    required_fields = {
+        "alert_id": str,
+        "timestamp": str,  # ISO 8601
+        "severity": str,
+        "affected_sectors": list,
+        "mitigation_recommendations": list,
+    }
+    
+    # For forecasts, also require confidence interval fields
+    if payload.get("alert_type") == "FORECAST":
+        required_fields.update({
+            "confidence_percent": (int, float),
+            "arrival_time_lower": str,
+            "arrival_time_upper": str,
+        })
+    
+    missing = []
+    wrong_types = []
+    
+    for field, expected_type in required_fields.items():
+        if field not in payload:
+            missing.append(field)
+        else:
+            if not isinstance(payload[field], expected_type):
+                wrong_types.append((field, type(payload[field]).__name__, expected_type))
+    
+    if missing or wrong_types:
+        raise ValueError(f"Alert payload invalid. Missing: {missing}, Wrong types: {wrong_types}")
+    
+    # Validate timestamp format
+    try:
+        datetime.fromisoformat(payload["timestamp"].replace("Z", "+00:00"))
+    except Exception as e:
+        raise ValueError("timestamp must be ISO8601") from e
+    
+    return True
+
+
+def forecast_key(payload: Dict[str, Any]) -> str:
+    """
+    Generate canonical key for forecast deduplication
+    
+    Args:
+        payload: Forecast payload
+        
+    Returns:
+        Canonical key string
+    """
+    event_type = payload.get("alert_type", "FORECAST")
+    
+    # Round timestamp to nearest 5 minutes for grouping
+    timestamp_str = payload.get("timestamp", "")
+    try:
+        ts = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+        rounded = int(ts.timestamp() // 300)  # 300s = 5min bucket
+    except:
+        rounded = 0
+    
+    location = payload.get("location", "global")
+    return f"{event_type}|{rounded}|{location}"
+
+
+def merge_forecasts(existing: Dict[str, Any], new_payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Merge two forecast payloads using weighted average
+    
+    Args:
+        existing: Existing forecast data
+        new_payload: New forecast payload
+        
+    Returns:
+        Merged forecast data
+    """
+    ex_payload = existing["payload"]
+    
+    # Weight by confidence scores
+    w1 = ex_payload.get("confidence_percent", 50.0)
+    w2 = new_payload.get("confidence_percent", 50.0)
+    total_weight = w1 + w2
+    
+    if total_weight > 0:
+        # Merge confidence intervals conservatively
+        merged_confidence = min(100.0, (w1 + w2) / 2)  # Average confidence
+        
+        # Widen confidence interval to be conservative
+        ex_lower = ex_payload.get("arrival_time_lower", "")
+        ex_upper = ex_payload.get("arrival_time_upper", "")
+        new_lower = new_payload.get("arrival_time_lower", "")
+        new_upper = new_payload.get("arrival_time_upper", "")
+        
+        try:
+            ex_lower_dt = datetime.fromisoformat(ex_lower.replace("Z", "+00:00"))
+            ex_upper_dt = datetime.fromisoformat(ex_upper.replace("Z", "+00:00"))
+            new_lower_dt = datetime.fromisoformat(new_lower.replace("Z", "+00:00"))
+            new_upper_dt = datetime.fromisoformat(new_upper.replace("Z", "+00:00"))
+            
+            merged_lower = min(ex_lower_dt, new_lower_dt)
+            merged_upper = max(ex_upper_dt, new_upper_dt)
+            
+            ex_payload.update({
+                "confidence_percent": merged_confidence,
+                "arrival_time_lower": merged_lower.isoformat().replace("+00:00", "Z"),
+                "arrival_time_upper": merged_upper.isoformat().replace("+00:00", "Z"),
+            })
+        except:
+            # If datetime parsing fails, keep existing values
+            pass
+    
+    existing["created_at"] = time.time()
+    return existing
+
+
+def handle_new_forecast(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Handle new forecast with deduplication and merging
+    
+    Args:
+        payload: New forecast payload
+        
+    Returns:
+        Final payload (merged or original)
+    """
+    key = forecast_key(payload)
+    now = time.time()
+    
+    if key in _active_forecasts:
+        existing = _active_forecasts[key]
+        if now - existing["created_at"] <= MERGE_WINDOW:
+            # Merge with existing forecast
+            merged = merge_forecasts(existing, payload)
+            _active_forecasts[key] = merged
+            logger.info(f"Merged forecast with existing key: {key}")
+            return merged["payload"]
+    
+    # Store new forecast
+    _active_forecasts[key] = {"payload": payload, "created_at": now}
+    logger.info(f"Stored new forecast with key: {key}")
+    return payload
 
 
 class AlertManager:
@@ -49,7 +210,7 @@ class AlertManager:
             FlashAlert object
         """
         if generation_start_time is None:
-            generation_start_time = datetime.utcnow()
+            generation_start_time = datetime.now(timezone.utc)
         
         # Determine severity based on flare class
         severity = self._determine_flare_severity(flare_class)
@@ -63,7 +224,7 @@ class AlertManager:
         alert_id = str(uuid.uuid4())
         
         # Create timestamps
-        created_at = datetime.utcnow()
+        created_at = datetime.now(timezone.utc)
         expires_at = created_at + timedelta(hours=self.alert_expiration_hours)
         
         # Create title and description
@@ -97,7 +258,7 @@ class AlertManager:
         self.active_alerts.append(flash_alert)
         
         # Log generation time
-        generation_time = (datetime.utcnow() - generation_start_time).total_seconds()
+        generation_time = (datetime.now(timezone.utc) - generation_start_time).total_seconds()
         logger.info(f"Flash alert generated in {generation_time:.3f}s for {flare_class} flare")
         
         if generation_time > 10.0:
@@ -142,7 +303,7 @@ class AlertManager:
         alert_id = str(uuid.uuid4())
         
         # Create timestamps
-        created_at = datetime.utcnow()
+        created_at = datetime.now(timezone.utc)
         expires_at = created_at + timedelta(hours=self.alert_expiration_hours)
         
         # Create title and description
@@ -161,28 +322,49 @@ class AlertManager:
             predicted_kp, affected_sectors, sector_predictions
         )
         
-        # Create impact forecast
+        # Create forecast payload for validation and merging
+        forecast_payload = {
+            "alert_id": alert_id,
+            "alert_type": "FORECAST",
+            "timestamp": created_at.isoformat().replace("+00:00", "Z"),
+            "severity": severity.value,
+            "affected_sectors": affected_sectors,
+            "mitigation_recommendations": mitigation,
+            "confidence_percent": confidence,
+            "arrival_time_lower": arrival_time_lower.isoformat().replace("+00:00", "Z"),
+            "arrival_time_upper": arrival_time_upper.isoformat().replace("+00:00", "Z"),
+            "predicted_kp_index": predicted_kp,
+            "sector_impacts": sector_predictions
+        }
+        
+        # Validate payload
+        validate_alert_payload(forecast_payload)
+        
+        # Handle deduplication and merging
+        final_payload = handle_new_forecast(forecast_payload)
+        
+        # Create impact forecast from final payload
         forecast = ImpactForecast(
-            alert_id=alert_id,
-            severity=severity,
+            alert_id=final_payload["alert_id"],
+            severity=AlertSeverity(final_payload["severity"]),
             title=title,
             description=description,
-            affected_sectors=affected_sectors,
-            created_at=created_at,
+            affected_sectors=final_payload["affected_sectors"],
+            created_at=datetime.fromisoformat(final_payload["timestamp"].replace("Z", "+00:00")),
             expires_at=expires_at,
-            mitigation_recommendations=mitigation,
-            predicted_kp_index=predicted_kp,
-            arrival_time_lower=arrival_time_lower,
-            arrival_time_upper=arrival_time_upper,
-            confidence_percent=confidence,
-            sector_impacts=sector_predictions
+            mitigation_recommendations=final_payload["mitigation_recommendations"],
+            predicted_kp_index=final_payload["predicted_kp_index"],
+            arrival_time_lower=datetime.fromisoformat(final_payload["arrival_time_lower"].replace("Z", "+00:00")),
+            arrival_time_upper=datetime.fromisoformat(final_payload["arrival_time_upper"].replace("Z", "+00:00")),
+            confidence_percent=final_payload["confidence_percent"],
+            sector_impacts=final_payload["sector_impacts"]
         )
         
         # Add to active alerts
         self.active_alerts.append(forecast)
         
-        logger.info(f"Impact forecast created: CME arrival {arrival_time_lower.isoformat()} "
-                   f"(confidence: {confidence:.0f}%)")
+        logger.info(f"Impact forecast created: CME arrival {final_payload['arrival_time_lower']} "
+                   f"(confidence: {final_payload['confidence_percent']:.0f}%)")
         
         return forecast
     
@@ -226,7 +408,7 @@ class AlertManager:
             Number of alerts expired
         """
         if current_time is None:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(timezone.utc)
         
         expired_alerts = []
         active_alerts = []
@@ -369,7 +551,11 @@ class AlertManager:
             Tuple of (lower_bound, upper_bound, confidence_percent)
         """
         cme_speed = cme_data.get('cme_speed', 500)
-        detection_time = cme_data.get('detection_time', datetime.utcnow())
+        detection_time = cme_data.get('detection_time', datetime.now(timezone.utc))
+        
+        # Ensure detection_time is timezone-aware
+        if detection_time.tzinfo is None:
+            detection_time = detection_time.replace(tzinfo=timezone.utc)
         
         # Distance to Earth: ~150 million km
         distance_km = 150_000_000
@@ -547,7 +733,11 @@ class AlertManager:
     
     def _format_time_until(self, future_time: datetime) -> str:
         """Format time until future event"""
-        delta = future_time - datetime.utcnow()
+        # Ensure future_time is timezone-aware
+        if future_time.tzinfo is None:
+            future_time = future_time.replace(tzinfo=timezone.utc)
+        
+        delta = future_time - datetime.now(timezone.utc)
         hours = delta.total_seconds() / 3600
         
         if hours < 1:

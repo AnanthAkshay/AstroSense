@@ -3,20 +3,22 @@
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL 15+
-- Docker & Docker Compose (optional)
+- Docker & Docker Compose 20.10+
 - NASA API Key (get from https://api.nasa.gov/)
+- Cesium Ion Token (get from https://cesium.com/ion/)
+- Domain name and SSL certificates (for production)
 
 ---
 
 ## 📦 Installation
 
-### Option 1: Docker Deployment (Recommended)
+### Option 1: Development Deployment
 
 1. **Clone and configure environment:**
 ```bash
+git clone <repository-url>
+cd astrosense
+
 # Set up environment variables
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
@@ -34,6 +36,58 @@ docker-compose up -d
 - Backend API: http://localhost:8000
 - Frontend Dashboard: http://localhost:3000
 - API Documentation: http://localhost:8000/docs
+
+### Option 2: Production Deployment (Recommended)
+
+1. **Server Requirements:**
+   - Linux server (Ubuntu 20.04+ recommended)
+   - 4+ CPU cores
+   - 8+ GB RAM
+   - 100+ GB SSD storage
+   - Docker & Docker Compose installed
+
+2. **Clone and configure:**
+```bash
+git clone <repository-url>
+cd astrosense
+
+# Copy production environment template
+cp .env.production.example .env.production
+
+# Edit with your production values
+nano .env.production
+```
+
+3. **Configure SSL certificates (recommended):**
+```bash
+# Create SSL directory
+mkdir -p nginx/ssl
+
+# Copy your SSL certificates
+cp your-cert.pem nginx/ssl/cert.pem
+cp your-key.pem nginx/ssl/key.pem
+
+# Update nginx.conf to enable SSL (uncomment SSL sections)
+nano nginx/nginx.conf
+```
+
+4. **Deploy production stack:**
+```bash
+# Build and start production services
+docker-compose -f docker-compose.prod.yml up -d
+
+# Check service status
+docker-compose -f docker-compose.prod.yml ps
+
+# View logs
+docker-compose -f docker-compose.prod.yml logs -f
+```
+
+5. **Access production system:**
+- Frontend: https://yourdomain.com
+- API: https://yourdomain.com/api
+- Monitoring: https://yourdomain.com:3001 (Grafana)
+- Metrics: https://yourdomain.com:9090 (Prometheus)
 
 ### Option 2: Manual Installation
 
@@ -260,6 +314,437 @@ result = fusion_combiner.fuse_with_conflict_resolution(
 # Get discrepancy summary
 summary = fusion_combiner.get_discrepancy_summary()
 ```
+
+---
+
+## 🔧 Production Configuration
+
+### Environment Variables Setup
+
+#### Required Variables
+```bash
+# Database
+POSTGRES_USER=astrosense_prod
+POSTGRES_PASSWORD=<secure-password>
+POSTGRES_DB=astrosense_prod
+
+# Redis
+REDIS_PASSWORD=<secure-password>
+
+# API Keys
+NASA_DONKI_API_KEY=<your-nasa-key>
+NEXT_PUBLIC_CESIUM_ION_TOKEN=<your-cesium-token>
+
+# Security
+SECRET_KEY=<32-character-secure-key>
+
+# Domain Configuration
+CORS_ORIGINS=https://yourdomain.com
+NEXT_PUBLIC_API_URL=https://yourdomain.com/api
+NEXT_PUBLIC_WS_URL=wss://yourdomain.com/api/stream
+```
+
+#### Optional Variables
+```bash
+# Monitoring
+GRAFANA_PASSWORD=<secure-password>
+ENABLE_MONITORING=true
+
+# SSL
+NEXT_PUBLIC_CSP_NONCE=<random-nonce>
+
+# Performance
+DATABASE_POOL_SIZE=20
+DATABASE_MAX_OVERFLOW=30
+```
+
+### Database Migration
+
+1. **Initial setup:**
+```bash
+# Create database backup directory
+mkdir -p backups
+
+# Initialize database with schema
+docker-compose -f docker-compose.prod.yml exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -f /docker-entrypoint-initdb.d/schema.sql
+```
+
+2. **Backup and restore:**
+```bash
+# Create backup
+docker-compose -f docker-compose.prod.yml exec postgres pg_dump -U $POSTGRES_USER $POSTGRES_DB > backups/backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Restore from backup
+docker-compose -f docker-compose.prod.yml exec -T postgres psql -U $POSTGRES_USER -d $POSTGRES_DB < backups/backup_file.sql
+```
+
+### SSL Certificate Setup
+
+1. **Using Let's Encrypt (recommended):**
+```bash
+# Install certbot
+sudo apt-get update
+sudo apt-get install certbot
+
+# Obtain certificates
+sudo certbot certonly --standalone -d yourdomain.com
+
+# Copy certificates
+sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem nginx/ssl/cert.pem
+sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem nginx/ssl/key.pem
+
+# Set proper permissions
+sudo chown $USER:$USER nginx/ssl/*.pem
+chmod 600 nginx/ssl/*.pem
+```
+
+2. **Auto-renewal setup:**
+```bash
+# Add to crontab
+echo "0 12 * * * /usr/bin/certbot renew --quiet && docker-compose -f docker-compose.prod.yml restart nginx" | sudo crontab -
+```
+
+### Firewall Configuration
+
+```bash
+# Allow HTTP and HTTPS
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Allow SSH (if needed)
+sudo ufw allow 22/tcp
+
+# Allow monitoring ports (restrict to your IP)
+sudo ufw allow from YOUR_IP_ADDRESS to any port 3001
+sudo ufw allow from YOUR_IP_ADDRESS to any port 9090
+
+# Enable firewall
+sudo ufw enable
+```
+
+---
+
+## 📊 Monitoring and Maintenance
+
+### Health Checks
+
+1. **Application health:**
+```bash
+# Check all services
+curl -f http://localhost/health
+
+# Check specific components
+curl -f http://localhost:8000/health  # Backend
+curl -f http://localhost:3000/api/health  # Frontend
+```
+
+2. **Database health:**
+```bash
+docker-compose -f docker-compose.prod.yml exec postgres pg_isready -U $POSTGRES_USER
+```
+
+3. **Redis health:**
+```bash
+docker-compose -f docker-compose.prod.yml exec redis redis-cli --no-auth-warning -a $REDIS_PASSWORD ping
+```
+
+### Log Management
+
+1. **View logs:**
+```bash
+# All services
+docker-compose -f docker-compose.prod.yml logs -f
+
+# Specific service
+docker-compose -f docker-compose.prod.yml logs -f backend
+docker-compose -f docker-compose.prod.yml logs -f frontend
+docker-compose -f docker-compose.prod.yml logs -f nginx
+```
+
+2. **Log rotation (automatic):**
+   - Configured in docker-compose.prod.yml
+   - Max 10MB per file, 3 files retained
+   - Logs automatically rotated by Docker
+
+### Performance Monitoring
+
+1. **Access Grafana dashboard:**
+   - URL: https://yourdomain.com:3001
+   - Username: admin
+   - Password: (from GRAFANA_PASSWORD env var)
+
+2. **Key metrics to monitor:**
+   - CPU usage (< 80%)
+   - Memory usage (< 85%)
+   - Disk usage (< 90%)
+   - Response times (< 2 seconds)
+   - Error rates (< 5%)
+   - Database connections
+
+3. **Prometheus metrics:**
+   - URL: https://yourdomain.com:9090
+   - Query examples:
+     ```
+     cpu_percent
+     memory_percent
+     request_count
+     error_count
+     avg_response_time
+     ```
+
+### Backup Strategy
+
+1. **Automated backups:**
+```bash
+# Create backup script
+cat > backup.sh << 'EOF'
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+docker-compose -f docker-compose.prod.yml exec -T postgres pg_dump -U $POSTGRES_USER $POSTGRES_DB > backups/astrosense_$DATE.sql
+gzip backups/astrosense_$DATE.sql
+
+# Keep only last 30 days
+find backups/ -name "*.sql.gz" -mtime +30 -delete
+EOF
+
+chmod +x backup.sh
+
+# Schedule daily backups
+echo "0 2 * * * /path/to/astrosense/backup.sh" | crontab -
+```
+
+2. **Model backups:**
+```bash
+# Backup ML models
+tar -czf backups/ml_models_$(date +%Y%m%d).tar.gz ml_models/
+```
+
+---
+
+## 🔄 Updates and Maintenance
+
+### Application Updates
+
+1. **Update application:**
+```bash
+# Pull latest code
+git pull origin main
+
+# Rebuild and restart services
+docker-compose -f docker-compose.prod.yml build --no-cache
+docker-compose -f docker-compose.prod.yml up -d
+
+# Verify deployment
+docker-compose -f docker-compose.prod.yml ps
+```
+
+2. **Rolling updates (zero downtime):**
+```bash
+# Update backend only
+docker-compose -f docker-compose.prod.yml up -d --no-deps backend
+
+# Update frontend only
+docker-compose -f docker-compose.prod.yml up -d --no-deps frontend
+```
+
+### Database Maintenance
+
+1. **Vacuum and analyze:**
+```bash
+docker-compose -f docker-compose.prod.yml exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c "VACUUM ANALYZE;"
+```
+
+2. **Check database size:**
+```bash
+docker-compose -f docker-compose.prod.yml exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT pg_size_pretty(pg_database_size('$POSTGRES_DB'));"
+```
+
+### System Maintenance
+
+1. **Clean up Docker:**
+```bash
+# Remove unused images
+docker image prune -f
+
+# Remove unused volumes
+docker volume prune -f
+
+# Remove unused networks
+docker network prune -f
+```
+
+2. **Update system packages:**
+```bash
+sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt-get autoremove -y
+```
+
+---
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+#### 1. Service Won't Start
+```bash
+# Check service status
+docker-compose -f docker-compose.prod.yml ps
+
+# Check logs for errors
+docker-compose -f docker-compose.prod.yml logs service-name
+
+# Check resource usage
+docker stats
+
+# Restart specific service
+docker-compose -f docker-compose.prod.yml restart service-name
+```
+
+#### 2. Database Connection Issues
+```bash
+# Check database is running
+docker-compose -f docker-compose.prod.yml ps postgres
+
+# Test connection
+docker-compose -f docker-compose.prod.yml exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT version();"
+
+# Check connection pool
+curl -s http://localhost:8000/health | jq '.database'
+```
+
+#### 3. High Memory Usage
+```bash
+# Check memory usage by service
+docker stats --no-stream
+
+# Restart services if needed
+docker-compose -f docker-compose.prod.yml restart
+
+# Check for memory leaks in logs
+docker-compose -f docker-compose.prod.yml logs backend | grep -i "memory\|oom"
+```
+
+#### 4. SSL Certificate Issues
+```bash
+# Check certificate validity
+openssl x509 -in nginx/ssl/cert.pem -text -noout
+
+# Test SSL connection
+openssl s_client -connect yourdomain.com:443 -servername yourdomain.com
+
+# Renew Let's Encrypt certificate
+sudo certbot renew --dry-run
+```
+
+#### 5. API Rate Limiting
+```bash
+# Check rate limit status
+curl -I http://localhost/api/fetch-data
+
+# Adjust rate limits in nginx.conf
+nano nginx/nginx.conf
+# Look for: limit_req zone=api burst=20 nodelay;
+
+# Restart nginx
+docker-compose -f docker-compose.prod.yml restart nginx
+```
+
+### Performance Issues
+
+#### 1. Slow Response Times
+```bash
+# Check system resources
+htop
+df -h
+iostat -x 1
+
+# Check database performance
+docker-compose -f docker-compose.prod.yml exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT * FROM pg_stat_activity WHERE state = 'active';"
+
+# Check slow queries
+docker-compose -f docker-compose.prod.yml logs backend | grep -i "slow\|timeout"
+```
+
+#### 2. High CPU Usage
+```bash
+# Identify CPU-intensive processes
+docker stats --no-stream
+
+# Check application metrics
+curl -s http://localhost:8000/health | jq '.system_metrics'
+
+# Scale services if needed (add more workers)
+# Edit docker-compose.prod.yml and increase replicas
+```
+
+### Recovery Procedures
+
+#### 1. Complete System Recovery
+```bash
+# Stop all services
+docker-compose -f docker-compose.prod.yml down
+
+# Restore from backup
+docker-compose -f docker-compose.prod.yml up -d postgres redis
+sleep 30
+docker-compose -f docker-compose.prod.yml exec -T postgres psql -U $POSTGRES_USER -d $POSTGRES_DB < backups/latest_backup.sql
+
+# Start remaining services
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+#### 2. Database Recovery
+```bash
+# Stop backend to prevent writes
+docker-compose -f docker-compose.prod.yml stop backend
+
+# Restore database
+docker-compose -f docker-compose.prod.yml exec -T postgres psql -U $POSTGRES_USER -d $POSTGRES_DB < backups/backup_file.sql
+
+# Restart backend
+docker-compose -f docker-compose.prod.yml start backend
+```
+
+---
+
+## 📞 Support and Maintenance
+
+### Monitoring Alerts
+
+Set up alerts for critical metrics:
+
+1. **Disk space > 90%**
+2. **Memory usage > 85%**
+3. **CPU usage > 80% for 5+ minutes**
+4. **Error rate > 5%**
+5. **Response time > 2 seconds**
+6. **Service downtime**
+
+### Maintenance Schedule
+
+**Daily:**
+- Check service health
+- Review error logs
+- Monitor resource usage
+
+**Weekly:**
+- Review performance metrics
+- Check backup integrity
+- Update security patches
+
+**Monthly:**
+- Database maintenance (VACUUM, ANALYZE)
+- Log cleanup
+- Security audit
+- Performance optimization review
+
+### Emergency Contacts
+
+- System Administrator: [contact-info]
+- Database Administrator: [contact-info]
+- Security Team: [contact-info]
+- On-call Engineer: [contact-info]
 
 ---
 

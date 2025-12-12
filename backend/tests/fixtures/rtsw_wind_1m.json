@@ -1,0 +1,20 @@
+[
+  {
+    "time_tag": "2024-01-01T00:00:00.000Z",
+    "proton_speed": 450.2,
+    "proton_density": 8.5,
+    "proton_temperature": 75000
+  },
+  {
+    "time_tag": "2024-01-01T00:01:00.000Z",
+    "proton_speed": 465.8,
+    "proton_density": 7.9,
+    "proton_temperature": 78000
+  },
+  {
+    "time_tag": "2024-01-01T00:02:00.000Z",
+    "proton_speed": 442.1,
+    "proton_density": 9.2,
+    "proton_temperature": 72000
+  }
+]
