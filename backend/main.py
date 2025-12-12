@@ -36,6 +36,10 @@ app.add_middleware(
 app.include_router(api_router)
 app.include_router(websocket_router)
 
+# Include auth router
+from api.auth import router as auth_router
+app.include_router(auth_router)
+
 @app.get("/")
 async def root():
     """Health check endpoint"""

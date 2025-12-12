@@ -112,3 +112,41 @@ CREATE TABLE IF NOT EXISTS composite_score_history (
 );
 
 CREATE INDEX idx_composite_history_timestamp ON composite_score_history(timestamp DESC);
+
+-- Authentication Tables
+
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Sessions table
+CREATE TABLE IF NOT EXISTS sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- OTP temporary storage
+CREATE TABLE IF NOT EXISTS otps (
+    email VARCHAR(255) PRIMARY KEY,
+    otp_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    attempts INTEGER DEFAULT 0
+);
+
+-- Indexes for authentication tables
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_sessions_token ON sessions(token);
+CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
+CREATE INDEX idx_otps_expires_at ON otps(expires_at);
