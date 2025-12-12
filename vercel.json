@@ -1,7 +1,4 @@
 {
   "version": 2,
-  "name": "astrosense",
-  "buildCommand": "cd frontend && npm run build",
-  "outputDirectory": "frontend/.next",
-  "framework": "nextjs"
+  "name": "astrosense"
 }
