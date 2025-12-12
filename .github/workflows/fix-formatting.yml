@@ -1,0 +1,71 @@
+name: Auto-fix Formatting
+
+on:
+  workflow_dispatch:  # Manual trigger only
+  pull_request:
+    branches: [main, master]
+    types: [opened, synchronize]
+
+jobs:
+  auto-fix:
+    name: Auto-fix Code Formatting
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install frontend dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+      
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install black
+      
+      - name: Auto-fix Prettier formatting
+        run: npm run format
+        continue-on-error: true
+      
+      - name: Auto-fix Black formatting
+        working-directory: backend
+        run: black . || true
+        continue-on-error: true
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: "Auto-fix: Format code with Prettier and Black"
+          title: "Auto-fix: Code Formatting"
+          body: |
+            This PR automatically fixes code formatting issues.
+            
+            - Prettier formatting for frontend
+            - Black formatting for backend
+            
+            Please review and merge if the changes look good.
+          branch: auto-fix-formatting
+          delete-branch: true
+
