@@ -98,18 +98,39 @@ def send_otp_email_sync(email: str, otp: str) -> Tuple[bool, str]:
         
         logger.info(f"📧 Sending OTP email to {email} via Gmail SMTP")
         
-        # Use SMTP_SSL for port 465 (recommended for Gmail)
-        if SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as smtp:
-                smtp.login(SMTP_USER, SMTP_PASS)
-                smtp.send_message(msg)
+        # Try multiple connection methods for Gmail
+        connection_methods = [
+            # Method 1: SMTP_SSL on port 465 (recommended)
+            lambda: smtplib.SMTP_SSL(SMTP_HOST, 465, timeout=30),
+            # Method 2: SMTP with STARTTLS on port 587
+            lambda: smtplib.SMTP(SMTP_HOST, 587, timeout=30),
+        ]
+        
+        last_error = None
+        
+        for i, create_smtp in enumerate(connection_methods):
+            try:
+                logger.info(f"📧 Trying Gmail connection method {i+1}...")
+                
+                with create_smtp() as smtp:
+                    if i == 1:  # STARTTLS method
+                        smtp.ehlo()
+                        smtp.starttls()
+                        smtp.ehlo()  # Call ehlo again after starttls
+                    
+                    smtp.login(SMTP_USER, SMTP_PASS)
+                    smtp.send_message(msg)
+                    
+                logger.info(f"✅ Gmail connection method {i+1} successful!")
+                break
+                
+            except Exception as method_error:
+                last_error = method_error
+                logger.warning(f"❌ Gmail connection method {i+1} failed: {method_error}")
+                continue
         else:
-            # Use STARTTLS for port 587
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
-                smtp.ehlo()
-                smtp.starttls()
-                smtp.login(SMTP_USER, SMTP_PASS)
-                smtp.send_message(msg)
+            # All methods failed
+            raise last_error
         
         logger.info(f"✅ Email sent successfully to {email}")
         masked_email = f"{email[:3]}***{email.split('@')[1]}"
