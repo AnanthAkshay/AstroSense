@@ -1,6 +1,9 @@
 {
   "version": 2,
   "name": "astrosense",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
   "env": {
     "NEXT_PUBLIC_CESIUM_ION_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjNDVhYTc4MC0xNzlmLTRmZDctYTg0Ny0xMDNmOWU1MzBhNTIiLCJpZCI6MzY5MTk5LCJpYXQiOjE3NjU1NTA1MzB9.QUDy7ZPb00qG37_n7tIxe-zml70a5cc8tj8sLKegNSA",
     "NASA_DONKI_API_KEY": "ATOOD7MgZPxGcaTmPZckylMkHC0SWfZK3HUgyK05"
