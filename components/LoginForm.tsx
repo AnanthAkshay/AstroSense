@@ -62,7 +62,14 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       const data = await response.json()
 
       if (data.success) {
-        onLogin(data.user)
+        // Pass user object if available, otherwise create one from email
+        const userData = data.user || {
+          email: data.email || email,
+          id: Date.now(), // Temporary ID
+          created_at: new Date().toISOString(),
+          last_login: new Date().toISOString()
+        }
+        onLogin(userData)
       } else {
         setError(data.message)
         setOtp('') // Clear wrong OTP

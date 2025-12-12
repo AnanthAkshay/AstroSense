@@ -86,18 +86,19 @@ def send_email_via_gmail(to_email: str, otp: str) -> None:
     if SMTP_PORT == 587 or SMTP_PORT == 465:
         try:
             # Try STARTTLS on port 587
-            with smtplib.SMTP(SMTP_HOST, 587, timeout=10) as smtp:
+            with smtplib.SMTP(SMTP_HOST, 587, timeout=15) as smtp:
                 smtp.set_debuglevel(0)  # Set to 1 for debug output
-                smtp.ehlo()
+                smtp.ehlo("localhost")  # Fix: Use valid hostname
                 smtp.starttls()
-                smtp.ehlo()
+                smtp.ehlo("localhost")  # Fix: Use valid hostname after STARTTLS
                 smtp.login(SMTP_USER, SMTP_PASS)
                 smtp.send_message(msg)
                 return
         except Exception as e1:
             # Fallback to SMTP_SSL on port 465
             try:
-                with smtplib.SMTP_SSL(SMTP_HOST, 465, timeout=10) as smtp:
+                with smtplib.SMTP_SSL(SMTP_HOST, 465, timeout=15) as smtp:
+                    smtp.ehlo("localhost")  # Fix: Use valid hostname
                     smtp.login(SMTP_USER, SMTP_PASS)
                     smtp.send_message(msg)
                     return
@@ -108,7 +109,8 @@ def send_email_via_gmail(to_email: str, otp: str) -> None:
                 )
     else:
         # Use configured port
-        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as smtp:
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
+            smtp.ehlo("localhost")  # Fix: Use valid hostname
             smtp.login(SMTP_USER, SMTP_PASS)
             smtp.send_message(msg)
 
@@ -223,4 +225,18 @@ def verify(payload: VerifyIn, db: Session = Depends(get_db)):
     session.verified = True
     db.add(session)
     db.commit()
-    return {"success": True, "message": "Verified", "email": email}
+
+    # Return user object for frontend
+    return {
+        "success": True,
+        "message": "Verified",
+        "email": email,
+        "user": {
+            "email": email,
+            "id": session.id,  # Using session id as temporary user id
+            "created_at": (
+                session.created_at.isoformat() if session.created_at else None
+            ),
+            "last_login": datetime.utcnow().isoformat(),
+        },
+    }

@@ -49,14 +49,13 @@ export default function UserInfo({ user, onLogout }: UserInfoProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 bg-astro-cyan/20 rounded-full flex items-center justify-center">
-            <span className="text-astro-cyan text-sm font-semibold">
-              {user.email.charAt(0).toUpperCase()}
+            <span className="text-astro-cyan text-xs font-semibold">
+              {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
             </span>
           </div>
           <div>
-            <div className="text-white font-medium">{user.email}</div>
-            <div className="text-xs text-gray-400">
-              Last login: {formatDate(user.last_login)}
+            <div className="text-white font-medium text-sm">
+              {user.email ? user.email.split('@')[0] : 'User'}
             </div>
           </div>
         </div>
