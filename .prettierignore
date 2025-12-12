@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Generated files
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Database files
+*.db
+*.sqlite
+
+# ML Models
+ml_models/
+backend/ml_models/
+
+# Cache
+.cache/
+.parcel-cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+*.pyc
+__pycache__/
+*.egg-info/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Public assets (usually don't need formatting)
+public/
+

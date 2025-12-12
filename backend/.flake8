@@ -1,0 +1,29 @@
+[flake8]
+max-line-length = 127
+max-complexity = 10
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    .env,
+    build,
+    dist,
+    *.egg-info,
+    migrations,
+    node_modules,
+    ml_models
+ignore =
+    E203,  # whitespace before ':'
+    E266,  # too many leading '#' for block comment
+    E501,  # line too long (handled by max-line-length)
+    W503,  # line break before binary operator
+    F401,  # imported but unused (handled by other tools)
+    F403,  # unable to detect undefined names
+    F405   # unable to detect undefined names from star imports
+per-file-ignores =
+    __init__.py:F401
+    */tests/*:E501
+    */test_*.py:E501
+

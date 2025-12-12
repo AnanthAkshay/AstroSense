@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\" --ignore-path .prettierignore",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\" --ignore-path .prettierignore"
   },
   "dependencies": {
     "next": "^14.2.0",
@@ -26,6 +28,7 @@
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
     "eslint": "^8.56.0",
-    "eslint-config-next": "^14.2.0"
+    "eslint-config-next": "^14.2.0",
+    "prettier": "^3.2.5"
   }
 }
