@@ -1,6 +1,6 @@
-// Vercel serverless function for NASA API
+// Next.js API route for NASA data
 export default async function handler(req, res) {
-  const NASA_API_KEY = 'ATOOD7MgZPxGcaTmPZckylMkHC0SWfZK3HUgyK05';
+  const NASA_API_KEY = process.env.NASA_DONKI_API_KEY || 'ATOOD7MgZPxGcaTmPZckylMkHC0SWfZK3HUgyK05';
   
   try {
     // Fetch from NASA DONKI API
