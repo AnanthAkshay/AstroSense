@@ -35,7 +35,7 @@ jobs:
       
       - name: Check Prettier formatting
         run: |
-          npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --ignore-path .prettierignore || (echo "⚠️ Prettier found formatting issues. Run 'npm run format' to fix." && exit 0)
+          npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --ignore-path .prettierignore || echo "⚠️ Prettier found formatting issues. Run 'npm run format' to fix."
         continue-on-error: true
 
   backend-format:
@@ -65,6 +65,6 @@ jobs:
       
       - name: Check Black formatting
         run: |
-          black --check --diff . || (echo "⚠️ Black found formatting issues. Run 'black .' to fix them." && exit 0)
+          black --check --diff . || echo "⚠️ Black found formatting issues. Run 'black .' to fix them."
         continue-on-error: true
 
