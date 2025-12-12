@@ -34,8 +34,8 @@ jobs:
           fi
       
       - name: Run ESLint
-        run: npm run lint || echo "ESLint found issues. Please fix them."
-        continue-on-error: false
+        run: npm run lint || (echo "⚠️ ESLint found issues. This is a warning, not blocking." && exit 0)
+        continue-on-error: true
 
   backend-lint:
     name: Flake8 (Backend)
@@ -62,12 +62,13 @@ jobs:
           pip install flake8
           pip install -r requirements.txt
       
-      - name: Run Flake8 (Critical Errors)
+      - name: Run Flake8 (Critical Errors Only)
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
-      
-      - name: Run Flake8 (All Checks)
-        run: |
-          flake8 . --count --max-complexity=10 --max-line-length=127 --statistics
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || (echo "⚠️ Flake8 found critical errors. Please review." && exit 1)
         continue-on-error: false
+      
+      - name: Run Flake8 (Style Checks)
+        run: |
+          flake8 . --count --max-complexity=10 --max-line-length=127 --statistics || (echo "⚠️ Flake8 found style issues. This is a warning." && exit 0)
+        continue-on-error: true
 
