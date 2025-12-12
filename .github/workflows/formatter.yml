@@ -26,16 +26,10 @@ jobs:
           cache: 'npm'
       
       - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm install
       
       - name: Check Prettier formatting
-        run: |
-          npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --ignore-path .prettierignore || echo "⚠️ Prettier found formatting issues. Run 'npm run format' to fix."
+        run: npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,scss,md}" --ignore-path .prettierignore
         continue-on-error: true
 
   backend-format:
@@ -64,7 +58,6 @@ jobs:
           pip install -r requirements.txt
       
       - name: Check Black formatting
-        run: |
-          black --check --diff . || echo "⚠️ Black found formatting issues. Run 'black .' to fix them."
+        run: black --check --diff . || true
         continue-on-error: true
 
